@@ -1,6 +1,11 @@
 import user from "../models/user.js";
 import bcrypt from "bcryptjs";
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+dotenv.config();
+
 
 export const registercode = async (req, res) => {
     try {
@@ -36,7 +41,7 @@ export const registercode = async (req, res) => {
             username: username,
             password: hashed_password,
             email: email,
-          
+
         });
 
         const token = jwt.sign({ id: USER._id, email: email }, process.env.SECRET_KEY, {
@@ -100,10 +105,120 @@ export const logincode = async (req, res) => {
 }
 
 
-export const forgotpasswordcode = async(req,res) =>{
-  
+export const forgotpasswordcode = async (req, res) => {
+    try {
+        const { identifier } = req.body;
+        if (!(identifier)) {
+            res.status(400).send("Please enter required information");
+        }
+
+        const founduser = await user.findOne({
+            $or: [{ username: identifier }, { email: identifier }]
+        });
+
+
+        if (!founduser) {
+            res.status(400).send("user doesn't exist");
+        }
+        // Generate password reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = Date.now() + 3600000; // 1 hour from now
+        founduser.passwordResetToken = resetToken;
+        founduser.passwordResetExpiry = resetTokenExpiry;
+        await founduser.save();
+
+        // Create reset URL
+        const resetUrl = `http://localhost:8000/reset-password/${resetToken}`;
+
+        // Email content
+        const mailOptions = {
+            from: process.env.ADMIN_EMAIL,
+            to: founduser.email,
+            subject: 'Password Reset Request',
+            html: `
+                <h2>Password Reset Request</h2>
+                <p>Hello ${founduser.username},</p>
+                <p>You requested a password reset. Click the link below to reset your password:</p>
+                <a href="${resetUrl}" style="background-color: #4CAF50; color: white; padding: 14px 20px; text-decoration: none; border-radius: 4px;">Reset Password</a>
+                <p>This link will expire in 1 hour.</p>
+                <p>If you didn't request this, please ignore this email.</p>
+                <br>
+                <p>Reset Token (for testing): ${resetToken}</p>
+            `
+        };
+
+        // Send email
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({
+            message: 'Password reset email sent successfully',
+            resetToken: resetToken // Only for testing - remove in production
+        });
+    } catch (error) {
+        console.error("Forgot password failed:", error.message);
+        res.status(500).json({
+            message: "Internal server error. Could not send reset email.",
+            error: error.message
+        });
+    }
+
+
+
 }
 
-export const resetpasswordcode = async(req,res)=>{
+export const resetpasswordcode = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { password, confirm_password } = req.body;
+
+        if (!(password && confirm_password)) {
+            res.status(400).send("Please enter all the information");
+        }
+        if (password != confirm_password) {
+            res.status(400).send("Password do not match");
+        }
+
+        if (password.length < 8) {
+            res.status(400).send("Password must contain atleast 8 letters");
+        }
+        // Find user with valid reset token
+        const founduser = await user.findOne({
+            passwordResetToken: token,
+            // passwordResetExpiry: { $gt: Date.now() } // Token not expired
+        });
+
+        if (!founduser) {
+            return res.status(400).send("Invalid or expired reset token");
+        }
+
+        // Hash new password
+        const hashed_password = await bcrypt.hash(password, 10);
+
+        // Update user password and clear reset token
+        founduser.password = hashed_password;
+        founduser.passwordResetToken = undefined;
+        founduser.passwordResetExpiry = undefined;
+        await founduser.save();
+
+        res.status(200).json({
+            message: 'Password has been reset successfully. You can now login with your new password.'
+        });
+
+    } catch (error) {
+        console.error("Password reset failed:", error.message);
+        res.status(500).json({
+            message: "Internal server error. Password reset unsuccessful.",
+            error: error.message
+        });
+    }
+
 
 }
+
+const transporter = nodemailer.createTransport({
+    service: 'Gmail', // or use SMTP settings
+    auth: {
+        user: process.env.ADMIN_EMAIL, // your admin email
+        pass: process.env.ADMIN_EMAIL_PASSWORD // your email password or app password
+    }
+});

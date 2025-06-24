@@ -5,6 +5,6 @@ const router = express.Router();
 router.post('/register', registercode);
 router.post('/login', logincode);
 router.post('/forgot-password',forgotpasswordcode);
-router.post('/reset-password',resetpasswordcode);
+router.post('/reset-password/:token',resetpasswordcode);
 
 export default router; // This exports the router so other files can import it otherwise files cannot access it.
