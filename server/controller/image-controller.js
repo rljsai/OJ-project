@@ -36,6 +36,7 @@ export const registercode = async (req, res) => {
             username: username,
             password: hashed_password,
             email: email,
+          
         });
 
         const token = jwt.sign({ id: USER._id, email: email }, process.env.SECRET_KEY, {
@@ -98,3 +99,11 @@ export const logincode = async (req, res) => {
 
 }
 
+
+export const forgotpasswordcode = async(req,res) =>{
+  
+}
+
+export const resetpasswordcode = async(req,res)=>{
+
+}
