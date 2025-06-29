@@ -5,9 +5,9 @@ import LoginPage from './LoginPage.jsx'
 import RegisterPage from './RegisterPage.jsx'
 import ForgotPasswordPage from './ForgotPasswordPage.jsx'
 import ResetPasswordPage from './ResetPasswordPage.jsx'
-
+import HomePage from './HomePage.jsx'
 createRoot(document.getElementById('root')).render(
 
-    <ResetPasswordPage />
+    <HomePage/>
 
 )

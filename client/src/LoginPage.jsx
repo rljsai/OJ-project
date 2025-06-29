@@ -4,9 +4,9 @@ import LoginForm from "./components/LoginForm"
 
 function LoginPage() {
     return (
-        <Fragment>
+     
         <LoginForm/>
-        </Fragment>
+       
 
     )
 }
