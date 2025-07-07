@@ -7,9 +7,10 @@ function MainPage() {
     return (
         <Fragment>
         <NavBar/>
+       
         </Fragment>
 
-    )
+    );
 }
 
 export default MainPage
