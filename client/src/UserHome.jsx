@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import logo from "./components/logo.png";
-import profile from "./components/profile.jpg";
+import logo from "./utilities/logo.png";
+import profile from "./utilities/profile.jpg";
 
 const mockProblems = [
   {

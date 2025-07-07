@@ -1,5 +1,5 @@
-import logo from './components/logo.png';
-import profile from './components/profile.jpg';
+import logo from './utilities/logo.png';
+import profile from './utilities/profile.jpg';
 import { useState } from 'react';
 
 function CircularProgress({ value, max, size = 120, stroke = 10 }) {

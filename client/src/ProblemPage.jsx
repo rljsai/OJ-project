@@ -3,10 +3,10 @@ import { FiMaximize2, FiMinimize2, FiCopy, FiAlignLeft, FiPlay, FiCheck, FiX, Fi
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 
-import logo from "./components/logo.png";
+import logo from "./utilities/logo.png"
 import "./index.css";
-import codeicon from "./components/code-icon.png";
-import profile from "./components/profile.jpg";
+import codeicon from "./utilities/code-icon.png";
+import profile from "./utilities/profile.jpg";
 
 const MaximizeButton = ({ isMaximized, onClick }) => (
   <button
