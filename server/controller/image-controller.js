@@ -18,7 +18,7 @@ export const registercode = async (req, res) => {
 
         const existing_user2 = await user.findOne({ username });
         if (existing_user2) {
-            res.status(400).send("username is unavailable");
+            res.status(400).send("username is already in use");
         }
 
         const existing_user1 = await user.findOne({ email });
@@ -37,20 +37,15 @@ export const registercode = async (req, res) => {
 
         const hashed_password = await bcrypt.hash(password, 10);
         // save the user in database
-        const USER = await user.create({
+     await user.create({
             username: username,
             password: hashed_password,
             email: email,
 
         });
 
-        const token = jwt.sign({ id: USER._id, email: email }, process.env.SECRET_KEY, {
-            expiresIn: '3hr',
-        });
 
-        USER.token = token;
-        USER.password = undefined;
-        res.status(200).json({ message: 'you have successfully registered', USER });
+        res.status(200).json({ message: 'you have successfully registered'});
     } catch (error) {
         console.log("user registration is unsuccessful", error.message);
         res.status(500).json({
@@ -63,16 +58,14 @@ export const registercode = async (req, res) => {
 
 export const logincode = async (req, res) => {
     try {
-        const { identifier, password } = req.body;
+        const { email, password } = req.body;
 
-        if (!(identifier && password)) {
+        if (!(email && password)) {
             res.status(400).send("Please enter all the information");
         }
 
-        const founduser = await user.findOne({
-            $or: [{ username: identifier }, { email: identifier }]
-        });
-
+        const founduser = await user.findOne({ email });
+       
 
         if (!founduser) {
             res.status(400).send("user doesn't exist");
@@ -91,8 +84,7 @@ export const logincode = async (req, res) => {
                 expiresIn: "3hr"
             });
         founduser.password = undefined;
-        founduser.token = token;
-        res.status(200).json({ message: 'you have successfully logged in', founduser });
+        res.status(200).json({ message: 'you have successfully logged in', token:token});
 
     } catch (error) {
         console.error("Login failed:", error.message);
