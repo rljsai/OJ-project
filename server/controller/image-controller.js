@@ -99,19 +99,18 @@ export const logincode = async (req, res) => {
 
 export const forgotpasswordcode = async (req, res) => {
     try {
-        const { identifier } = req.body;
-        if (!(identifier)) {
+        const { email } = req.body;
+        if (!(email)) {
             res.status(400).send("Please enter required information");
         }
 
-        const founduser = await user.findOne({
-            $or: [{ username: identifier }, { email: identifier }]
-        });
+        const founduser = await user.findOne({email});
 
 
         if (!founduser) {
             res.status(400).send("user doesn't exist");
         }
+        
         // Generate password reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenExpiry = Date.now() + 3600000; // 1 hour from now
