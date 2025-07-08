@@ -1,4 +1,4 @@
-import { Fragment } from "react"
+import {Link } from 'react-router-dom';
 import logo from "./utilities/logo.png"
 
 
@@ -39,14 +39,14 @@ function LoginPage() {
 
                             <p className="text-sm font-light text-gray-500 dark:text-gray-400 text-center">
                                 Does not have account?{" "}
-                                <a href="#" className="font-medium text-[#A020F0] hover:underline">
+                                <Link to="/register" className="font-medium text-[#A020F0] hover:underline">
                                     Sign Up
-                                </a>
+                                </Link>
                             </p>
                             <p className="text-sm font-light text-gray-500 dark:text-gray-400 text-center">
-                                <a href="#" className="font-medium text-[#A020F0] hover:underline ">
+                                <Link to="/forgot-password" className="font-medium text-[#A020F0] hover:underline ">
                                     Forgot Password?
-                                </a>
+                                </Link>
 
                             </p>
 
