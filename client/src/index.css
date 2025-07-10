@@ -21,3 +21,8 @@
     background-color: #9ca3af; /* Tailwind's gray-400 */
   }
 }
+
+/* Force CodeMirror background to match panel */
+.cm-theme-dark, .cm-editor.cm-theme-dark, .cm-editor {
+  background-color: #18181b !important;
+}
