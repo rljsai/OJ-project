@@ -78,7 +78,7 @@ export const logincode = async (req, res) => {
         }
 
         const token = jwt.sign({
-            id: founduser._id, email: founduser.email
+            id: founduser._id, email: founduser.email,username:founduser.username,role:founduser.role
         }, process.env.SECRET_KEY,
             {
                 expiresIn: "3hr"
@@ -157,55 +157,54 @@ export const forgotpasswordcode = async (req, res) => {
 
 }
 
+
+
 export const resetpasswordcode = async (req, res) => {
     try {
         const { token } = req.params;
         const { password, confirm_password } = req.body;
 
         if (!(password && confirm_password)) {
-            res.status(400).send("Please enter all the information");
+            return res.status(400).send("Please enter all the information");
         }
-        if (password != confirm_password) {
-            res.status(400).send("Password do not match");
+
+        if (password !== confirm_password) {
+            return res.status(400).send("Passwords do not match");
         }
 
         if (password.length < 8) {
-            res.status(400).send("Password must contain atleast 8 letters");
+            return res.status(400).send("Password must be at least 8 characters");
         }
-        // Find user with valid reset token
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
         const founduser = await user.findOne({
-            passwordResetToken: token,
-            // passwordResetExpiry: { $gt: Date.now() } // Token not expired
+            passwordResetToken: hashedToken,
+            passwordResetExpiry: { $gt: Date.now() }
         });
 
         if (!founduser) {
             return res.status(400).send("Invalid or expired reset token");
         }
 
-        // Hash new password
-        const hashed_password = await bcrypt.hash(password, 10);
-
-        // Update user password and clear reset token
-        founduser.password = hashed_password;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        founduser.password = hashedPassword;
         founduser.passwordResetToken = undefined;
         founduser.passwordResetExpiry = undefined;
         await founduser.save();
 
-        res.status(200).json({
-            message: 'Password has been reset successfully. You can now login with your new password.'
+        return res.status(200).json({
+            message: 'Password has been reset successfully. You can now log in with your new password.'
         });
 
     } catch (error) {
         console.error("Password reset failed:", error.message);
-        res.status(500).json({
+        return res.status(500).json({
             message: "Internal server error. Password reset unsuccessful.",
             error: error.message
-        });
-    }
-
-
-}
-
+        });
+    }
+};
 const transporter = nodemailer.createTransport({
     service: 'Gmail', // or use SMTP settings
     auth: {
