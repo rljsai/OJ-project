@@ -7,6 +7,7 @@ import ResetPasswordPage from './ResetPasswordPage.jsx';
 import ProblemPage from './ProblemPage.jsx';
 import ProfilePage from './ProfilePage.jsx';
 import UserHome from './UserHome.jsx';
+
 function App() {
     return (
      <Router>
@@ -18,6 +19,7 @@ function App() {
             <Route path="/problem" element={<ProblemPage/>}/>
             <Route path="/profile" element={<ProfilePage/>}/>
             <Route path="/user-home" element={<UserHome/>}/>
+      
         </Routes>
      </Router>
 
