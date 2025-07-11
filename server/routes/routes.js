@@ -1,5 +1,5 @@
 import express from 'express';
-import { forgotpasswordcode, logincode, registercode, resetpasswordcode } from '../controller/image-controller.js';
+import { forgotpasswordcode, logincode, registercode, verifyOtpForReset, resetPasswordWithOtp } from '../controller/image-controller.js';
 import { addproblem,getallproblems,getproblem,deleteproblem,modifyproblem } from '../controller/problem-controller.js';
 import { verifytoken } from '../middleware/auth.js';
 const router = express.Router();
@@ -7,7 +7,9 @@ const router = express.Router();
 router.post('/register', registercode);
 router.post('/login', logincode);
 router.post('/forgot-password',forgotpasswordcode);
-router.post('/reset-password/:token',resetpasswordcode);
+router.post('/forgot-password/verify-otp', verifyOtpForReset);
+router.post('/forgot-password/reset', resetPasswordWithOtp);
+
 
 router.get('/problemset/:id',verifytoken,getproblem);
 router.delete('/problemset/:id/delete',verifytoken,deleteproblem);

@@ -23,14 +23,15 @@ const userschema= new mongoose.Schema({
     enum: ['user', 'admin'], 
     default: 'user' ,
    },
-    passwordResetToken: {
-      type: String,
-      default:undefined,
+   resetOtp: {
+    type: String,
+    default: undefined,
    },
-   passwordResetExpires: {
-      type: Date,
-      default:undefined,
+   resetOtpExpires: {
+    type: Date,
+    default: undefined,
    }
+   
 
 });
 
