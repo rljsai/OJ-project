@@ -124,8 +124,8 @@ export const forgotpasswordcode = async (req, res) => {
             to: founduser.email,
             subject: 'Password Reset OTP',
             html: `
-                <h2>Password Reset OTP</h2>
-                <p>Hello ${founduser.username},</p>
+                
+                <p>Hello <b>${founduser.username}</b>,</p>
                 <p>Your OTP for password reset is <b>${otp}</b>. It is valid for 10 minutes.</p>
                 <p>If you didn't request this, please ignore this email.</p>
             `
