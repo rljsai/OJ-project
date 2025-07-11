@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Enable CORS for frontend at port 5173
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
