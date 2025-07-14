@@ -2,69 +2,63 @@ import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { v4 as uuidv4 } from 'uuid';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const outputPath = path.join(__dirname,"outputs");
+const basePath = path.join(__dirname);
 
-// Ensure outputs directory exists
-if(!fs.existsSync(outputPath)){
-    fs.mkdirSync(outputPath, { recursive: true });
-   
-}
- 
-export const executeCpp = async (filepath) => {
-  
-    
-    const jobId = path.basename(filepath).split(".")[0];
-    const outPath = path.join(outputPath,`${jobId}.exe`);
-    
 
-    return new Promise((resolve,reject)=>{
-      
-        const compileCommand = `g++ "${filepath}" -o "${outPath}"`;
-        console.log(`Compilation command: ${compileCommand}`);
-        
-        exec(compileCommand, (compileError, compileStdout, compileStderr) => {
-            console.log(`Compilation completed`);
-            console.log(`Compile stdout: ${compileStdout}`);
-            console.log(`Compile stderr: ${compileStderr}`);
-            console.log(`Compile error: ${compileError}`);
-            
-            if(compileError){
-                console.log(`Compilation failed with error: ${compileError.message}`);
-                reject({error: compileError, stderr: compileStderr});
-                return;
+
+export const executeCpp = async (code, input) => {
+    return new Promise((resolve, reject) => {
+        const jobId = uuidv4();
+
+        const codepath = path.join(basePath, "codes", `${jobId}.cpp`);
+        const inputpath = path.join(basePath, "inputs", `${jobId}.in`);
+        const outputpath = path.join(basePath, "outputs", `${jobId}.out`);
+
+        [codepath, inputpath, outputpath].forEach((p) =>
+            fs.mkdirSync(path.dirname(p), { recursive: true })
+        );
+
+        fs.writeFileSync(codepath, code);
+        fs.writeFileSync(inputpath, input);
+
+        const cleanUp = () => {
+            [codepath, inputpath, outputpath].forEach((file) => {
+                if (fs.existsSync(file)) fs.unlinkSync(file);
+            });
+        };
+
+        const compileCommand = `g++ "${codepath}" -o "${outputpath}"`;
+
+        exec(compileCommand, (error, stdout, stderr) => {
+            if (error) {
+                cleanUp();
+                reject({ error: "Compilation failed", stderr: stderr || error.message });
             }
-            
-            // Check if executable was created
-            if(fs.existsSync(outPath)){
-                console.log(`Executable created successfully: ${outPath}`);
-            } else {
-                console.log(`Executable was NOT created at: ${outPath}`);
-                reject({error: new Error('Executable not created'), stderr: compileStderr});
-                return;
-            }
-            
-            // Then execute the compiled file
-            const execCommand = `"${outPath}"`;
-            console.log(`Execution command: ${execCommand}`);
-            
-            exec(execCommand, (execError, execStdout, execStderr) => {
-                console.log(`Execution completed`);
-                console.log(`Exec stdout: ${execStdout}`);
-                console.log(`Exec stderr: ${execStderr}`);
-                console.log(`Exec error: ${execError}`);
-                
-                if(execError){
-                    console.log(`Execution failed with error: ${execError.message}`);
-                    reject({error: execError, stderr: execStderr});
-                    return;
+
+            const runCommand = `"${outputpath}" < "${inputpath}"`;
+            exec(runCommand, { timeout: 3000 }, (err2, stdout, stderr2) => {
+                cleanUp();
+
+                if (err2) {
+                    if (err2.killed && err2.signal === "SIGTERM") {
+                        return reject({ error: "Time Limit Exceeded", message: "" });
+                    }
+
+                    return reject({ error: "Runtime Error", message: stderr2 || err2.message });
                 }
-                
-                console.log(`Execution successful, output: ${execStdout}`);
-                resolve(execStdout);
+                resolve({ status: "Successful", output: stdout.trim() });
             });
         });
+
+
+
+
     });
+
+
+
 }
