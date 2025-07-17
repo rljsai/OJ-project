@@ -5,15 +5,15 @@ import { runPythonCode } from '../testcustomcodes/pythonrunner.js';
 import { runJavaCode } from '../testcustomcodes/javarunner.js';
 import { runJavaScriptCode } from '../testcustomcodes/javascriptrunner.js';
 import { runGoCode } from '../testcustomcodes/gorunner.js';
-
-export const runcode = async (req, res) => {
+import submission from '../models/submission.js';
+export const submitcode = async (req, res) => {
   const { language, code, questionId } = req.body;
 
   try {
     const question = await problem.findById(questionId);
-    const testcases = question.testcases.slice(0, 2);
+    const testcases = question.testcases;
     const results = [];
-
+    let PassedTestcases=0;
     for (const testcase of testcases) {
       let result;
 
@@ -56,18 +56,29 @@ export const runcode = async (req, res) => {
       // Build final result structure
       results.push({
         compileverdict: true,
-        actualoutput: result.output,
-        expectedoutput: testcase.ExpectedOutput,
         verdict: result.success && result.output.trim() === testcase.ExpectedOutput.trim()
           ? "Accepted"
           : "Wrong Answer",
         message: result.errorType || null
 
       });
-    }
 
+      if(result.success && result.output.trim() === testcase.ExpectedOutput.trim()){
+        PassedTestcases++;
+      }
+    }
+    await submission.create({
+        language:language,
+        verdict: PassedTestcases === testcases.length ? 'Accepted' : 'Wrong Answer',
+        score: (PassedTestcases / testcases.length) * 100,
+        code:code,
+        username: userId,
+        problem: questionId
+      });
     return res.status(200).json({
       success: true,
+      PassedTestcases:PassedTestcases,
+      TotalTestcases:testcases.length,
       results,
     });
 
