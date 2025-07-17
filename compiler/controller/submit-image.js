@@ -72,7 +72,7 @@ export const submitcode = async (req, res) => {
         verdict: PassedTestcases === testcases.length ? 'Accepted' : 'Wrong Answer',
         score: (PassedTestcases / testcases.length) * 100,
         code:code,
-        username: userId,
+        username: req.user.username,
         problem: questionId
       });
     return res.status(200).json({
