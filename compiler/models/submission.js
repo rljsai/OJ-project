@@ -29,7 +29,7 @@ const submissionschema= new mongoose.Schema({
         required:true,
     }
 },
-{timestamp:true});
+{timestamps:true});
 
 const submission=mongoose.model("Submission",submissionschema);
 export default submission;

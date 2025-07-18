@@ -4,6 +4,9 @@ import "./index.css";
 import { useParams } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 
+import { useLocation } from "react-router-dom";
+import moment from "moment"; // for formatting timestamp
+
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
@@ -276,6 +279,24 @@ function ProblemPage() {
   };
 
 
+  const [activeTab, setActiveTab] = useState("description");
+  const [submissions, setSubmissions] = useState([]);
+  const [viewingCode, setViewingCode] = useState(null); // for code popup
+
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        const res = await axios.get(`${COMPILER_URL}/getsubmissionbyid?questionId=${id}`, {
+          headers: { auth: token }
+        });
+        setSubmissions(res.data);
+      } catch (err) {
+        console.error("Failed to fetch submissions", err.response?.data || err.message);
+      }
+    };
+    fetchSubmissions();
+  }, [id]);
 
 
 
@@ -480,18 +501,20 @@ function ProblemPage() {
               {/* Tab Header */}
               <div className="bg-[#292A40] flex items-center rounded-t-lg pl-2 h-12 space-x-6 text-sm font-medium relative">
 
-                <button className="flex items-center text-gray-400 hover:text-white pb-1">
-                  <FiFileText className="mr-1 text-blue-500" size={18} />
+                <button
+                  onClick={() => setActiveTab("description")}
+                  className={`flex items-center pb-1 ${activeTab === "description" ? "text-white border-b-2 border-[#A020F0]" : "text-gray-400 hover:text-white"}`}
+                >
+                  <FiFileText className="mr-1 text-[#A020F0]" size={18} />
                   <span>Description</span>
                 </button>
-
-                <span className="mx-2 h-5 w-px bg-gray-600 inline-block align-middle"></span>
-
-                <button className="flex items-center text-gray-400 hover:text-white pb-1">
-                  <FiRefreshCw className="mr-1 text-blue-500" size={18} />
+                <button
+                  onClick={() => setActiveTab("submissions")}
+                  className={`flex items-center pb-1 ${activeTab === "submissions" ? "text-white border-b-2 border-[#A020F0]" : "text-gray-400 hover:text-white"}`}
+                >
+                  <FiRefreshCw className="mr-1 text-[#A020F0]" size={18} />
                   <span>Submissions</span>
                 </button>
-
                 <button
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-[#232336] text-gray-400 hover:text-white transition-colors"
                   onClick={() => setMaximizedPanel(maximizedPanel === 'question' ? null : 'question')}
@@ -505,15 +528,99 @@ function ProblemPage() {
 
               {/* Content Area */}
               <div className="flex-1 overflow-y-auto bg-[#242436] p-4 rounded-b-lg custom-scrollbar">
-                {!problem ? (
-                  <p className="text-white">Loading problem...</p>
-                ) : (
+                {activeTab === "description" ? (
                   <>
-                    <h2 className="text-white text-2xl font-bold mb-4">{problem.title}</h2>
-                    <p className="text-gray-300 whitespace-pre-line">{problem.description}</p>
+
+                    {!problem ? (
+                      <p className="text-white">Loading problem...</p>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-white text-2xl font-bold">{problem.title}</h2>
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold
+    ${problem.difficulty === 'Easy' ? 'bg-green-800 text-green-300' :
+                              problem.difficulty === 'Medium' ? 'bg-yellow-700 text-yellow-300' :
+                                'bg-red-800 text-red-300'}
+  `}>
+                            {problem.difficulty}
+                          </span>
+                        </div>
+
+                        <p className="text-gray-300 whitespace-pre-line mb-6">{problem.description}</p>
+
+                        {/* Testcases */}
+                        {problem.testcases && problem.testcases.length > 0 && (
+                          <div className="space-y-4">
+                            <h3 className="text-white text-lg font-semibold">Sample Testcases:</h3>
+                            {problem.testcases.map((test, index) => (
+                              <div key={index} className="bg-[#18181b] rounded p-3 border border-[#292A40]">
+                                <div className="text-gray-300 text-sm font-medium mb-2">Testcase {index + 1}</div>
+                                <div className="grid grid-cols-2 gap-4 text-xs">
+                                  <div>
+                                    <div className="text-gray-400">Input:</div>
+                                    <pre className="text-white mt-1">{test.input}</pre>
+                                  </div>
+                                  <div>
+                                    <div className="text-gray-400">Expected Output:</div>
+                                    <pre className="text-white mt-1">{test.ExpectedOutput}</pre>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                      </>
+                    )}
                   </>
+                ) : (
+                  <div>
+                    {submissions.length === 0 ? (
+                      <p className="text-gray-300">No submissions found.</p>
+                    ) : (
+                      <table className="w-full text-left border-separate border-spacing-y-2">
+                        <thead>
+                          <tr className="text-sm text-gray-400">
+                            <th className="px-2">#</th>
+                            <th className="px-2">Timestamp</th>
+                            <th className="px-2">Language</th>
+                            <th className="px-2">Verdict</th>
+                            <th className="px-2">Code</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {submissions.map((sub, index) => (
+                            <tr
+                              key={sub._id}
+                              className={`${index % 2 === 0 ? "bg-[#18181b]" : "bg-[#1f1f2b]"} text-white rounded`}
+                            >
+                              <td className="px-2 py-2">{index + 1}</td>
+                              <td className="px-2">{moment(sub.createdAt).format("YYYY-MM-DD HH:mm:ss")}</td>
+                              <td className="px-2">{sub.language}</td>
+                              <td className="px-2">{sub.verdict}</td>
+                              <td className="px-2 text-[#A020F0] underline cursor-pointer" onClick={() => setViewingCode(sub.code)}>View</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
                 )}
               </div>
+
+              {viewingCode && (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                  <div className="bg-[#1e1e2f] w-11/12 max-w-4xl rounded-lg shadow-lg border border-[#A020F0] overflow-hidden">
+                    <div className="flex justify-between items-center p-3 bg-[#292A40] border-b border-[#A020F0]">
+                      <h2 className="text-white font-semibold text-lg">Submitted Code</h2>
+                      <button onClick={() => setViewingCode(null)} className="text-gray-400 hover:text-white text-xl px-2">&times;</button>
+                    </div>
+                    <div className="max-h-[70vh] overflow-y-auto p-4 bg-[#18181b] text-white text-sm custom-scrollbar whitespace-pre-wrap break-words font-mono">
+                      <pre>{viewingCode}</pre>
+                    </div>
+                  </div>
+                </div>
+              )}
 
 
             </div>
@@ -711,12 +818,12 @@ function ProblemPage() {
                           ) : submitResults ? (
                             <>
                               <div className={`p-3 rounded ${submitResults.PassedTestcases === submitResults.TotalTestcases
-                                  ? "bg-green-900/20 border border-green-500/30"
-                                  : "bg-yellow-900/20 border border-yellow-500/30"
+                                ? "bg-green-900/20 border border-green-500/30"
+                                : "bg-yellow-900/20 border border-yellow-500/30"
                                 }`}>
                                 <span className={`font-semibold ${submitResults.PassedTestcases === submitResults.TotalTestcases
-                                    ? "text-green-400"
-                                    : "text-yellow-300"
+                                  ? "text-green-400"
+                                  : "text-yellow-300"
                                   }`}>
                                   {submitResults.PassedTestcases === submitResults.TotalTestcases
                                     ? "✅ All Testcases Passed"

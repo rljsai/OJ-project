@@ -47,6 +47,14 @@ export const submitcode = async (req, res) => {
 
       // Handle Compilation Error early
       if (!result.success && result.errorType === "Compilation Error") {
+        await submission.create({
+          language:language,
+          verdict: result.errorType,
+          score: 0,
+          code:code,
+          username: req.user.id,
+          problem: questionId
+        });
         return res.status(200).json({
           compileverdict: false,
           message: result.message
