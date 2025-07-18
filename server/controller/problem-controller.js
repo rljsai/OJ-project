@@ -40,11 +40,11 @@ export const getallproblems = async(req,res)=>{
 export const deleteproblem = async(req,res)=>{
     try{
         const {id}=req.params;
-        const deletedproblem = await problems.findByIdAndDelete(id);
+        const deletedproblem = await problem.findByIdAndDelete(id);
         if(!deletedproblem){
-             res.status(404).send("problem not found");
+            return res.status(404).json({message:"problem not found"});
         }
-        res.status(200).send("problem deleted successfully");
+        res.status(200).json({message:"problem deleted successfully"});
     }catch(error){
          res.status(500).json(
                 {
@@ -57,9 +57,9 @@ export const deleteproblem = async(req,res)=>{
 export const getproblem = async(req,res)=>{
     try{
         const {id}=req.params;
-        const requestedproblem = await problems.findById(id);
+        const requestedproblem = await problem.findById(id);
         if(!requestedproblem){
-             res.status(404).send("problem not found");
+            return res.status(404).json({message:"problem not found"});
         }
         res.status(200).json(requestedproblem);
     }catch(error){
@@ -75,20 +75,21 @@ export const modifyproblem = async(req,res)=>{
     try{
         const {id}=req.params;
         const updates=req.body;
-        const updatedproblem = await problems.findByIdAndUpdate(id,updates,{
+        const updatedproblem = await problem.findByIdAndUpdate(id,updates,{
             new:true,
             runValidators:true,
         });
         if(!updatedproblem){
-             res.status(404).send("problem not found");
+            return res.status(404).json({message:"problem not found"});
         }
 
-        res.status(200).send("problem updated successfully");
+        res.status(200).json({message:"problem updated successfully"});
     }catch(error){
          res.status(500).json(
                 {
-                    message:" server error in fetching problem",
+                    message:" server error in updating problem",
                     error:error.message,
-                });
+   
+                     });
     }
 }

@@ -40,7 +40,7 @@ export const generateAIResponse = async(code)=>{
             temperature: 0,
             topK: 1,
             topP: 1,
-            maxOutputTokens: 600
+            maxOutputTokens: 400
           }
         }
       );

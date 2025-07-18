@@ -1,6 +1,8 @@
 import { Fragment, useState, useEffect, useRef } from "react";
 import { FiMaximize2, FiMinimize2, FiCopy, FiRotateCcw, FiFileText, FiRefreshCw } from "react-icons/fi";
 import "./index.css";
+import { useParams } from "react-router-dom";
+import ReactMarkdown from 'react-markdown';
 
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
@@ -14,6 +16,9 @@ import logo from "./utilities/logo.png";
 import codeicon from "./utilities/code-icon.png";
 import profile from "./utilities/profile.jpg";
 
+import axios from "axios";
+const SERVER_URL = import.meta.env.VITE_BACKEND_SERVER_URL;
+const COMPILER_URL = import.meta.env.VITE_COMPILER_SERVER_URL;
 
 function getTemplateCode(language) {
   switch (language) {
@@ -47,6 +52,29 @@ function getLanguageExtension(lang) {
 
 
 function ProblemPage() {
+  const [problem, setProblem] = useState(null);
+  const { id } = useParams();
+  useEffect(() => {
+    const fetchProblem = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        const res = await axios.get(`${SERVER_URL}/problemset/${id}`, {
+          headers: { auth: token }
+        });
+        setProblem(res.data);
+      } catch (err) {
+        console.error("Failed to fetch problem", err.response?.data || err.message);
+      }
+    };
+
+    fetchProblem();
+  }, [id]);
+
+
+
+
+
+
   const [code, setCode] = useState(`#include <iostream>\nusing namespace std;\n\nint main() {\n    // your code goes here\n    return 0;\n}`);
   const [selectedLanguage, setSelectedLanguage] = useState("cpp");
 
@@ -60,9 +88,10 @@ function ProblemPage() {
   const dragRef = useRef(null);
   const containerRef = useRef(null);
   const isDraggingRef = useRef(false);
-  
+
   // Only one panel can be maximized at a time: 'question', 'code', or null
   const [maximizedPanel, setMaximizedPanel] = useState(null); // null | 'question' | 'code'
+  const [running, setRunning] = useState(false);
 
   // Bottom bar action states
   const [activeAction, setActiveAction] = useState(null); // 'custom' | 'run' | 'submit' | 'ai-feedback' | null
@@ -93,11 +122,168 @@ function ProblemPage() {
     setIsExpanded(true);
   };
 
+  const [isTesting, setIsTesting] = useState(false);
+  const handleCustomTest = async () => {
+    setIsTesting(true);
+    try {
+      const token = localStorage.getItem("authToken");
 
-  const handleCustomTest = () => {
-    // Simulate test execution
-    setCustomOutput(`Output for input: ${customInput}\nExecution completed successfully.`);
+      const response = await axios.post(
+        `${COMPILER_URL}/customtest`,
+        {
+          code,
+          language: selectedLanguage,
+          testcase: customInput
+        },
+        {
+          headers: {
+            auth: token
+          }
+        }
+      );
+      if (response.data.success) { setCustomOutput(response.data.output); }
+      else { setCustomOutput(response.data.errorType); }
+
+    } catch (error) {
+      console.error("Custom test error:", error);
+      const message = error.response?.data?.message || error.message || "Unknown error";
+      setCustomOutput(`❌ Error: ${message}`);
+    } finally {
+      setIsTesting(false);
+    }
+
+
+
   };
+
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState({ score: null, feedback: "" });
+  const getScoreColor = (score) => {
+    if (score >= 85) return "text-green-400";
+    if (score >= 60) return "text-yellow-400";
+    return "text-red-400";
+  };
+
+  const handleAIFeedback = async () => {
+    setIsAIGenerating(true);
+    setAiFeedback({ score: null, feedback: "" });
+
+    try {
+      const token = localStorage.getItem("authToken");
+
+      const response = await axios.post(
+        `${COMPILER_URL}/ai-feedback`,
+        { code },
+        { headers: { auth: token } }
+      );
+
+      if (response.data.feedback) {
+        try {
+          const parsed = JSON.parse(response.data.feedback);
+
+          const formattedFeedback = typeof parsed.feedback === "string"
+            ? parsed.feedback.replace(/\\n/g, "\n")
+            : parsed.feedback;
+
+          setAiFeedback({ score: parsed.score, feedback: formattedFeedback });
+        } catch (e) {
+          console.error("Failed to parse AI JSON:", e);
+          setAiFeedback({ score: null, feedback: response.data.feedback });
+        }
+      }
+    } catch (error) {
+      console.error("AI Feedback error:", error);
+      const message = error.response?.data?.message || error.message || "Unknown error";
+      setAiFeedback({ score: null, feedback: `❌ Error: ${message}` });
+    } finally {
+      setIsAIGenerating(false);
+    }
+  };
+
+
+
+  const [runResults, setRunResults] = useState(null);
+  const [compileError, setCompileError] = useState('');
+
+
+  const handleRunCode = async () => {
+    setActiveAction('run');
+    setIsExpanded(true);
+    setCompileError('');
+    setRunResults(null);
+    setRunning(true); // <-- Start loading
+
+    try {
+      const token = localStorage.getItem("authToken");
+
+      const response = await axios.post(`${COMPILER_URL}/runcode`, {
+        code,
+        language: selectedLanguage,
+        questionId: id,
+      }, {
+        headers: { auth: token }
+      });
+
+      if (response.data.compileverdict === false) {
+        setCompileError(response.data.message);
+      } else if (response.data.success) {
+        setRunResults(response.data.results);
+      } else {
+        setCompileError("Unknown error or malformed response");
+      }
+    } catch (err) {
+      setCompileError(err.response?.data?.message || err.message);
+    } finally {
+      setRunning(false); // <-- End loading
+    }
+  };
+
+
+
+  const [submitResults, setSubmitResults] = useState(null);
+  const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const handleSubmitCode = async () => {
+    setActiveAction('submit');
+    setIsExpanded(true);
+    setSubmitError('');
+    setSubmitResults(null);
+    setSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("authToken");
+
+      const response = await axios.post(`${COMPILER_URL}/submitcode`, {
+        code,
+        language: selectedLanguage,
+        questionId: id
+      }, {
+        headers: { auth: token }
+      });
+
+      if (response.data.compileverdict === false) {
+        setSubmitError(response.data.message);
+      } else if (response.data.success) {
+        setSubmitResults(response.data);
+      } else {
+        setSubmitError("Unknown error occurred.");
+      }
+    } catch (err) {
+      setSubmitError(err.response?.data?.message || err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
+
+
+
+
+
+
+
+
 
   // Set initial code editor height to 80% of container height
   useEffect(() => {
@@ -215,7 +401,7 @@ function ProblemPage() {
           <FiCopy size={16} />
         </button>
         {copied && (
-          <span className="absolute right-0 top-8 bg-black text-white text-xs rounded px-2 py-1 shadow-lg z-30 whitespace-nowrap" style={{border: '1px solid #A020F0'}}>Code Copied!</span>
+          <span className="absolute right-0 top-8 bg-black text-white text-xs rounded px-2 py-1 shadow-lg z-30 whitespace-nowrap" style={{ border: '1px solid #A020F0' }}>Code Copied!</span>
         )}
       </div>
       <button
@@ -319,7 +505,14 @@ function ProblemPage() {
 
               {/* Content Area */}
               <div className="flex-1 overflow-y-auto bg-[#242436] p-4 rounded-b-lg custom-scrollbar">
-                {/* Problem content intentionally left empty */}
+                {!problem ? (
+                  <p className="text-white">Loading problem...</p>
+                ) : (
+                  <>
+                    <h2 className="text-white text-2xl font-bold mb-4">{problem.title}</h2>
+                    <p className="text-gray-300 whitespace-pre-line">{problem.description}</p>
+                  </>
+                )}
               </div>
 
 
@@ -342,7 +535,7 @@ function ProblemPage() {
               {/* Split below header into two scrollable parts with draggable divider */}
               <div className="flex-1 flex flex-col min-h-0">
                 {/* Part 1: Code Editor */}
-                <div style={{height: codeEditorHeight ?? 300, minHeight: 100}} className="overflow-y-auto bg-[#18181b] p-4 custom-scrollbar">
+                <div style={{ height: codeEditorHeight ?? 300, minHeight: 100 }} className="overflow-y-auto bg-[#18181b] p-4 custom-scrollbar">
                   {renderCodeEditor()}
                 </div>
 
@@ -350,10 +543,10 @@ function ProblemPage() {
                 <div
                   ref={dragRef}
                   onMouseDown={handleDragStart}
-                  style={{height: 8, cursor: 'row-resize', background: '#1a0f23'}}
+                  style={{ height: 8, cursor: 'row-resize', background: '#1a0f23' }}
                   className="w-full flex items-center justify-center select-none"
                 >
-                  <div style={{height: 4, width: 60, borderRadius: 2, background: '#444'}}></div>
+                  <div style={{ height: 4, width: 60, borderRadius: 2, background: '#444' }}></div>
                 </div>
 
 
@@ -364,10 +557,10 @@ function ProblemPage() {
                     <div className="flex items-center gap-3">
 
                       {/* Custom Input Checkbox */}
-                      <input 
-                        type="checkbox" 
-                        id="customInputCheck" 
-                        className="accent-[#A020F0]" 
+                      <input
+                        type="checkbox"
+                        id="customInputCheck"
+                        className="accent-[#A020F0]"
                         checked={customInputChecked}
                         onChange={(e) => handleCustomToggle(e.target.checked)}
                       />
@@ -378,33 +571,43 @@ function ProblemPage() {
                     <div className="flex items-center gap-3">
 
                       {/* AI-feedback Button */}
-                      <button 
-                        onClick={() => handleActionClick('ai-feedback')}
-                        className="px-5 py-2 rounded border border-[#A020F0] text-[#A020F0] bg-transparent font-semibold text-sm hover:bg-[#292A40] hover:text-white transition-colors"
+                      <button
+                        onClick={() => {
+                          handleActionClick('ai-feedback');
+                          handleAIFeedback(); // Call AI generation
+                        }}
+                        disabled={isAIGenerating}
+                        className={`px-5 py-2 rounded border border-[#A020F0] font-semibold text-sm transition-colors
+    ${isAIGenerating ? 'bg-[#3a3a55] text-gray-400 cursor-not-allowed' : 'text-[#A020F0] bg-transparent hover:bg-[#292A40] hover:text-white'}`}
                       >
-                        AI-feedback
+                        {isAIGenerating ? 'Generating...' : 'AI-feedback'}
                       </button>
+
 
                       {/* Run Button */}
-                      <button 
-                        onClick={() => handleActionClick('run')}
-                        className="px-5 py-2 rounded border border-[#A020F0] bg-[#292A40] text-white font-semibold text-sm hover:bg-[#3a3a55] transition-colors"
+                      <button
+                        onClick={handleRunCode}
+                        disabled={running}
+                        className="bg-[#0f172a] text-white border border-[#334155] px-4 py-2 rounded hover:bg-[#1e293b] transition"
                       >
-                        Run Code
+                        {running ? "Running..." : "Run Code"}
                       </button>
 
+
                       {/* Submit Button */}
-                      <button 
-                        onClick={() => handleActionClick('submit')}
-                        className="px-5 py-2 rounded bg-[#A020F0] text-white font-semibold text-sm hover:bg-[#7c1bb3] transition-colors"
+                      <button
+                        onClick={handleSubmitCode}
+                        disabled={submitting}
+                        className="bg-[#1d1d2f] text-white border border-[#334155] px-4 py-2 rounded hover:bg-[#2c2c3d] transition"
                       >
-                        Submit Code
+                        {submitting ? "Submitting..." : "Submit Code"}
                       </button>
+
 
 
                     </div>
                   </div>
-                  
+
                   {/* Dynamic Content Area */}
                   {isExpanded && (
                     <div className="mt-4 pt-4 border-t border-[#292A40]">
@@ -427,9 +630,10 @@ function ProblemPage() {
                           {/* Test Button */}
                           <button
                             onClick={handleCustomTest}
+                            disabled={isTesting}
                             className="px-4 py-2 rounded bg-[#A020F0] text-white font-semibold text-sm hover:bg-[#7c1bb3] transition-colors"
                           >
-                            Test
+                            {isTesting ? "Testing..." : "Test"}
                           </button>
 
                           {/* Custom Output */}
@@ -448,148 +652,136 @@ function ProblemPage() {
                       {/* Run */}
                       {activeAction === 'run' && (
                         <div className="space-y-4">
-
-                          <div className="bg-green-900/20 border border-green-500/30 rounded p-3">
-                            <span className="text-green-400 font-semibold">✓ Compilation Successful</span>
-                          </div>
-
-                          {/* Test Cases */}
-                          <div className="space-y-3">
-                            <h4 className="text-white font-semibold">Test Cases:</h4>
-
-                            <div className="space-y-2">
-                              <div className="bg-[#18181b] rounded p-3 border border-[#292A40]">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-gray-300 text-sm">Test Case 1</span>
-                                  <span className="text-green-400 text-sm">✓ Accepted</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-xs">
-                                  <div>
-                                    <span className="text-gray-400">Input:</span>
-                                    <pre className="text-white mt-1">5</pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400">Expected Output:</span>
-                                    <pre className="text-white mt-1">25</pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400">Your Output:</span>
-                                    <pre className="text-white mt-1">25</pre>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="bg-[#18181b] rounded p-3 border border-[#292A40]">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-gray-300 text-sm">Test Case 2</span>
-                                  <span className="text-green-400 text-sm">✓ Accepted</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-xs">
-                                  <div>
-                                    <span className="text-gray-400">Input:</span>
-                                    <pre className="text-white mt-1">10</pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400">Expected Output:</span>
-                                    <pre className="text-white mt-1">100</pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400">Your Output:</span>
-                                    <pre className="text-white mt-1">100</pre>
-                                  </div>
-                                </div>
-                              </div>
-
+                          {running ? (
+                            <div className="text-yellow-400 text-sm italic animate-pulse">⚙️ Running...</div>
+                          ) : compileError ? (
+                            <div className="bg-red-900/20 border border-red-500/30 rounded p-3">
+                              <span className="text-red-400 font-semibold">❌ Compilation Failed:</span>
+                              <pre className="text-white mt-2 whitespace-pre-wrap break-words">{compileError}</pre>
                             </div>
-                          </div>
+                          ) : runResults ? (
+                            <>
+                              <div className="bg-green-900/20 border border-green-500/30 rounded p-3">
+                                <span className="text-green-400 font-semibold">✓ Compilation Successful</span>
+                              </div>
+
+                              <div className="space-y-3">
+                                <h4 className="text-white font-semibold">Test Case Results:</h4>
+
+                                {runResults.map((test, index) => (
+                                  <div key={index} className="bg-[#18181b] rounded p-3 border border-[#292A40]">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="text-gray-300 text-sm">Test Case {index + 1}</span>
+                                      <span className={`text-sm font-medium ${test.verdict === "Accepted" ? "text-green-400" : "text-red-400"
+                                        }`}>
+                                        {test.verdict}
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-xs">
+                                      <div>
+                                        <span className="text-gray-400">Expected Output:</span>
+                                        <pre className="text-white mt-1">{test.expectedoutput}</pre>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400">Your Output:</span>
+                                        <pre className="text-white mt-1">{test.actualoutput}</pre>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-gray-300 text-sm italic">Click run to test your code.</p>
+                          )}
                         </div>
                       )}
+
 
                       {/* Submit */}
                       {activeAction === 'submit' && (
                         <div className="space-y-4">
-
-                          <div className="bg-green-900/20 border border-green-500/30 rounded p-3">
-                            <span className="text-green-400 font-semibold">✓ All Test Cases Passed!</span>
-                          </div>
-
-                          {/* Final Results */}
-                          <div className="space-y-3">
-                            <h4 className="text-white font-semibold">Final Results:</h4>
-                            <div className="space-y-2">
-                              <div className="bg-[#18181b] rounded p-3 border border-[#292A40]">
-
-                                {/* Test Case 1 */}
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-gray-300 text-sm">Test Case 1</span>
-                                  <span className="text-green-400 text-sm">✓ Accepted</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-xs">
-                                  <div>
-                                    <span className="text-gray-400">Input:</span>
-                                    <pre className="text-white mt-1">5</pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400">Expected Output:</span>
-                                    <pre className="text-white mt-1">25</pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400">Your Output:</span>
-                                    <pre className="text-white mt-1">25</pre>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="bg-[#18181b] rounded p-3 border border-[#292A40]">
-
-                                {/* Test Case 2 */}
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-gray-300 text-sm">Test Case 2</span>
-                                  <span className="text-green-400 text-sm">✓ Accepted</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-xs">
-                                  <div>
-                                    <span className="text-gray-400">Input:</span>
-                                    <pre className="text-white mt-1">10</pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400">Expected Output:</span>
-                                    <pre className="text-white mt-1">100</pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400">Your Output:</span>
-                                    <pre className="text-white mt-1">100</pre>
-                                  </div>
-                                </div>
-                              </div>
+                          {submitting ? (
+                            <div className="text-yellow-400 text-sm italic animate-pulse">🚀 Submitting...</div>
+                          ) : submitError ? (
+                            <div className="bg-red-900/20 border border-red-500/30 rounded p-3">
+                              <span className="text-red-400 font-semibold">❌ Compilation Failed:</span>
+                              <pre className="text-white mt-2 whitespace-pre-wrap break-words">{submitError}</pre>
                             </div>
-                          </div>
+                          ) : submitResults ? (
+                            <>
+                              <div className={`p-3 rounded ${submitResults.PassedTestcases === submitResults.TotalTestcases
+                                  ? "bg-green-900/20 border border-green-500/30"
+                                  : "bg-yellow-900/20 border border-yellow-500/30"
+                                }`}>
+                                <span className={`font-semibold ${submitResults.PassedTestcases === submitResults.TotalTestcases
+                                    ? "text-green-400"
+                                    : "text-yellow-300"
+                                  }`}>
+                                  {submitResults.PassedTestcases === submitResults.TotalTestcases
+                                    ? "✅ All Testcases Passed"
+                                    : `⚠️ Passed ${submitResults.PassedTestcases} / ${submitResults.TotalTestcases} Testcases`}
+                                </span>
+                              </div>
+
+                              <div className="space-y-3">
+                                <h4 className="text-white font-semibold">Test Case Verdicts:</h4>
+
+                                {submitResults.results.map((test, index) => (
+                                  <div key={index} className="bg-[#18181b] rounded p-3 border border-[#292A40]">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="text-gray-300 text-sm">Test Case {index + 1}</span>
+                                      <span className={`text-sm font-medium ${test.verdict === "Accepted" ? "text-green-400" : "text-red-400"
+                                        }`}>
+                                        {test.verdict}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-gray-300 text-sm italic">Click submit to evaluate against all testcases.</p>
+                          )}
                         </div>
                       )}
+
 
                       {/* AI-feedback */}
                       {activeAction === 'ai-feedback' && (
                         <div className="space-y-4">
-
-                          {/* AI-feedback Title */}
+                          {/* Title */}
                           <div className="bg-blue-900/20 border border-blue-500/30 rounded p-3">
                             <span className="text-blue-400 font-semibold">🤖 AI Feedback</span>
                           </div>
-                          <div className="bg-[#18181b] rounded p-3 border border-[#292A40]">
-                            <p className="text-white text-sm leading-relaxed">
-                              Your code looks good! Here are some suggestions for improvement:
-                            </p>
-                            <ul className="text-gray-300 text-sm mt-3 space-y-1 list-disc list-inside">
-                              <li>Consider adding input validation for edge cases</li>
-                              <li>The algorithm efficiency is optimal for this problem</li>
-                              <li>Good use of standard library functions</li>
-                              <li>Code readability is excellent</li>
-                            </ul>
-                            <p className="text-white text-sm mt-3">
-                              Overall score: <span className="text-green-400 font-semibold">8.5/10</span>
-                            </p>
+
+                          {/* Output Area */}
+                          <div className="bg-[#18181b] rounded p-4 border border-[#292A40] max-h-72 overflow-y-auto space-y-3">
+                            {isAIGenerating ? (
+                              <p className="text-gray-300 text-sm italic">Analyzing code, please wait...</p>
+                            ) : aiFeedback.score !== null ? (
+                              <>
+                                <div className="text-white text-base font-medium">
+                                  <span className="text-blue-400">Score:</span>{" "}
+                                  <span className={`${getScoreColor(aiFeedback.score)} font-semibold`}>
+                                    {aiFeedback.score} / 100
+                                  </span>
+                                </div>
+
+                                <div className="text-white text-gray-300  text-sm whitespace-pre-line leading-relaxed">
+                                  {aiFeedback.feedback}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-gray-300 whitespace-pre-line text-sm">
+                                {aiFeedback.feedback || "⚠️ No valid feedback received."}
+                              </div>
+                            )}
                           </div>
                         </div>
+
                       )}
+
                     </div>
                   )}
                 </div>
