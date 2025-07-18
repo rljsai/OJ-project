@@ -7,9 +7,9 @@ import { Link } from "react-router-dom";
 const SERVER_URL = import.meta.env.VITE_BACKEND_SERVER_URL;
 
 const difficultyColors = {
-  Easy: "text-green-400",
-  Medium: "text-yellow-400",
-  Hard: "text-red-400"
+    Easy: "text-green-400",
+    Medium: "text-yellow-400",
+    Hard: "text-red-400"
 };
 
 
@@ -169,7 +169,12 @@ function WebHome() {
                                                 }`}
                                         >
                                             <td className="px-8 py-4 whitespace-nowrap text-base font-medium text-gray-900 dark:text-white">{idx + 1}</td>
-                                            <td className="px-8 py-4 whitespace-nowrap text-base text-[#A020F0] font-semibold cursor-pointer hover:underline">{problem.title}</td>
+                                            <td className="px-8 py-4 whitespace-nowrap text-base text-[#A020F0] font-semibold cursor-pointer"><Link
+                                                to={`/problem/${problem._id}`}
+                                                className="text-[#A020F0] hover:underline"
+                                            >
+                                                {problem.title}
+                                            </Link></td>
                                             <td className={`px-8 py-4 whitespace-nowrap text-base font-bold ${difficultyColors[problem.difficulty]}`}>{problem.difficulty}</td>
                                             <td className="px-8 py-4 whitespace-nowrap text-base text-gray-700 dark:text-gray-300">{problem.score}</td>
                                         </tr>

@@ -10,6 +10,8 @@ import UserHome from './UserHome.jsx';
 import ResetPasswordPage from './ResetPasswordPage.jsx';
 import OtpPage from './OtpPage.jsx';
 
+
+
 function App() {
     return (
      <Router>
@@ -22,7 +24,8 @@ function App() {
             <Route path="/profile" element={<ProfilePage/>}/>
             <Route path="/user-home" element={<UserHome/>}/>
             <Route path="/otp" element={<OtpPage/>}/>
-      
+            <Route path="/problem/:id" element={<ProblemPage />} />
+          
         </Routes>
      </Router>
 
