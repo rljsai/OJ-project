@@ -17,6 +17,9 @@ const difficultyColors = {
 
 
 function UserHome() {
+
+    const navigate = useNavigate();
+    const token = localStorage.getItem("authToken");
     const [problems, setProblems] = useState([]);
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("All");
@@ -24,9 +27,7 @@ function UserHome() {
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [role, setRole] = useState('');
     const [username, setUsername] = useState('');
-    const navigate = useNavigate();
-    const token = localStorage.getItem("authToken");
-    const [isAdmin, setIsAdmin] = useState(false);
+   const [isAdmin, setIsAdmin] = useState(false);
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedProblem, setSelectedProblem] = useState(null);
@@ -35,8 +36,6 @@ function UserHome() {
     const [editProblem, setEditProblem] = useState(null);
     const [editError, setEditError] = useState("");
 
-
-    // Add near other useStates
     const [showAddModal, setShowAddModal] = useState(false);
     const [newProblem, setNewProblem] = useState({
         title: "",
@@ -47,6 +46,67 @@ function UserHome() {
     const [addError, setAddError] = useState("");
 
 
+
+    useEffect(() => {
+        const fetchProblems = async () => {
+            try {
+                const token = localStorage.getItem("authToken");
+                if (!token) {
+                    console.error("No auth token found.");
+                    return;
+                }
+
+                const response = await axios.get(`${SERVER_URL}/problemset`, {
+                    headers: {
+                        auth: token
+                    }
+                });
+                setProblems(response.data);
+            } catch (err) {
+                console.error("Error fetching problems:", err.response?.data || err.message);
+            }
+        };
+
+        fetchProblems();
+    }, []);
+    
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (profileRef.current && !profileRef.current.contains(event.target)) {
+                setProfileMenuOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+
+    useEffect(() => {
+        if (!token) {
+            navigate("/");
+            return;
+        }
+
+        try {
+            const decoded = jwtDecode(token);
+            setUsername(decoded.username || '');
+            setRole(decoded.role || '');
+            setIsAdmin(decoded.role === 'admin');
+        } catch (err) {
+            navigate("/");
+        }
+
+
+    }, [token, navigate]);
+
+
+
+    const filteredProblems = problems.filter((problem) => {
+        const matchesSearch = problem.title.toLowerCase().includes(search.toLowerCase());
+        const matchesFilter = filter === "All" || problem.difficulty === filter;
+        return matchesSearch && matchesFilter;
+    });
 
     const handleTestcaseChange = (index, field, value) => {
         const updatedTestcases = [...newProblem.testcases];
@@ -80,10 +140,9 @@ function UserHome() {
                 headers: { auth: token }
             });
 
-            // Refetch or optimistically add
             setProblems(prev => [...prev, {
                 ...newProblem,
-                _id: Date.now().toString(), // Temp ID, real one would come from backend if you fetch
+                _id: Date.now().toString(), 
                 score: newProblem.difficulty === 'Easy' ? 30 :
                     newProblem.difficulty === 'Medium' ? 60 : 100
             }]);
@@ -96,87 +155,35 @@ function UserHome() {
         }
     };
 
-    useEffect(() => {
-        const fetchProblems = async () => {
-            try {
-                const token = localStorage.getItem("authToken");
-                if (!token) {
-                    console.error("No auth token found.");
-                    return;
-                }
 
-                const response = await axios.get(`${SERVER_URL}/problemset`, {
-                    headers: {
-                        auth: token
-                    }
-                });
-                setProblems(response.data);
-            } catch (err) {
-                console.error("Error fetching problems:", err.response?.data || err.message);
-            }
-        };
-
-        fetchProblems();
-    }, []);
-
-
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (profileRef.current && !profileRef.current.contains(event.target)) {
-                setProfileMenuOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const handleUpdateProblem = async () => {
+  const handleUpdateProblem = async () => {
         setEditError("");
-      
-        if (!editProblem.title || !editProblem.description || !editProblem.testcases.length) {
-          setEditError("Please fill in all required fields.");
-          return;
-        }
-      
-        try {
-          await axios.patch(`${SERVER_URL}/problemset/${editProblem._id}/modify`, editProblem, {
-            headers: { auth: token },
-          });
-      
-          // Update in state
-          setProblems(prev =>
-            prev.map(p => (p._id === editProblem._id ? { ...p, ...editProblem } : p))
-          );
-      
-          setShowModifyModal(false);
-          setEditProblem(null);
-        } catch (err) {
-          console.error("Modify error", err);
-          setEditError(err.response?.data?.message || "Failed to modify problem.");
-        }
-      };
-      
 
-    useEffect(() => {
-        if (!token) {
-            navigate("/");
+        if (!editProblem.title || !editProblem.description || !editProblem.testcases.length) {
+            setEditError("Please fill in all required fields.");
             return;
         }
 
         try {
-            const decoded = jwtDecode(token);
-            setUsername(decoded.username || '');
-            setRole(decoded.role || '');
-            setIsAdmin(decoded.role === 'admin');
+            await axios.patch(`${SERVER_URL}/problemset/${editProblem._id}/modify`, editProblem, {
+                headers: { auth: token },
+            });
+
+           
+            setProblems(prev =>
+                prev.map(p => (p._id === editProblem._id ? { ...p, ...editProblem } : p))
+            );
+
+            setShowModifyModal(false);
+            setEditProblem(null);
         } catch (err) {
-            navigate("/");
+            console.error("Modify error", err);
+            setEditError(err.response?.data?.message || "Failed to modify problem.");
         }
+    };
 
 
-    }, [token, navigate]);
-
-
-    const handleDelete = async () => {
+const handleDelete = async () => {
         try {
             await axios.delete(`${SERVER_URL}/problemset/${selectedProblem._id}/delete`, {
                 headers: {
@@ -193,12 +200,6 @@ function UserHome() {
         }
     };
 
-    const filteredProblems = problems.filter((problem) => {
-        const matchesSearch = problem.title.toLowerCase().includes(search.toLowerCase());
-        const matchesFilter = filter === "All" || problem.difficulty === filter;
-        return matchesSearch && matchesFilter;
-    });
-
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-[#0d0315]">
             <nav className="bg-white border-gray-200 dark:bg-[#0d0315] shadow w-full">
@@ -212,12 +213,19 @@ function UserHome() {
                     <div className="relative" ref={profileRef}>
                         <button
                             type="button"
-                            className="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                            className="flex items-center text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600 px-2 py-1"
                             onClick={() => setProfileMenuOpen((open) => !open)}
                         >
-
-                            <img className="w-12 h-12 rounded-full border-2 border-[#A020F0]" src={profile} alt="user profile" />
+                            <img
+                                className="w-12 h-12 rounded-full border-2 border-[#A020F0]"
+                                src={profile}
+                                alt="user profile"
+                            />
+                            <span className="ml-3 text-white font-semibold hidden sm:block pr-2">
+                                {username}
+                            </span>
                         </button>
+
 
                         {
                             profileMenuOpen && (
@@ -338,7 +346,7 @@ function UserHome() {
 
                                                 <button
                                                     onClick={() => {
-                                                        setEditProblem(problem); // fill the modal
+                                                        setEditProblem(problem); 
                                                         setShowModifyModal(true);
                                                     }}
                                                     className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
@@ -378,21 +386,21 @@ function UserHome() {
       `}</style>
 
             {showDeleteModal && selectedProblem && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
-                            Are you sure you want to delete "<span className="text-white text-bold">{selectedProblem.title}</span>"?
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+                    <div className="bg-[#18122B] border border-[#A020F0] p-6 rounded-2xl shadow-2xl max-w-md w-full">
+                        <h3 className="text-lg font-semibold text-white mb-4">
+                            Are you sure you want to delete <span className="text-[#A020F0] font-bold">"{selectedProblem.title}"</span>?
                         </h3>
                         <div className="flex justify-end gap-4">
                             <button
                                 onClick={() => setShowDeleteModal(false)}
-                                className="px-4 py-2 bg-gray-300 text-gray-900 rounded hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
+                                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 border border-gray-600"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleDelete}
-                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 border border-red-700"
                             >
                                 Confirm Delete
                             </button>
@@ -402,25 +410,25 @@ function UserHome() {
             )}
 
             {showAddModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-xl max-w-2xl w-full relative">
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+                    <div className="bg-[#18122B] border border-[#A020F0] p-6 rounded-2xl shadow-2xl max-w-2xl w-full relative">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add Problem</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-red-600 text-2xl">&times;</button>
+                            <h3 className="text-xl font-bold text-white">Add Problem</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-red-500 text-2xl">&times;</button>
                         </div>
 
                         <div className="space-y-4">
                             <input
                                 type="text"
                                 placeholder="Title"
-                                className="w-full p-3 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-full p-3 rounded border border-gray-700 bg-[#232336] text-white"
                                 value={newProblem.title}
                                 onChange={(e) => setNewProblem({ ...newProblem, title: e.target.value })}
                             />
 
                             <textarea
                                 placeholder="Description"
-                                className="w-full p-3 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-full p-3 rounded border border-gray-700 bg-[#232336] text-white"
                                 rows="3"
                                 value={newProblem.description}
                                 onChange={(e) => setNewProblem({ ...newProblem, description: e.target.value })}
@@ -429,7 +437,7 @@ function UserHome() {
                             <select
                                 value={newProblem.difficulty}
                                 onChange={(e) => setNewProblem({ ...newProblem, difficulty: e.target.value })}
-                                className="w-full p-3 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-full p-3 rounded border border-gray-700 bg-[#232336] text-white"
                             >
                                 <option value="Easy">Easy</option>
                                 <option value="Medium">Medium</option>
@@ -437,7 +445,7 @@ function UserHome() {
                             </select>
 
                             <div>
-                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Testcases</h4>
+                                <h4 className="text-lg font-semibold text-white mb-2">Testcases</h4>
                                 {newProblem.testcases.map((tc, index) => (
                                     <div key={index} className="flex gap-2 mb-2">
                                         <input
@@ -445,40 +453,40 @@ function UserHome() {
                                             placeholder="Input"
                                             value={tc.input}
                                             onChange={(e) => handleTestcaseChange(index, "input", e.target.value)}
-                                            className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white"
+                                            className="w-1/2 p-2 border border-gray-700 rounded bg-[#232336] text-white"
                                         />
                                         <input
                                             type="text"
                                             placeholder="Expected Output"
                                             value={tc.ExpectedOutput}
                                             onChange={(e) => handleTestcaseChange(index, "ExpectedOutput", e.target.value)}
-                                            className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white"
+                                            className="w-1/2 p-2 border border-gray-700 rounded bg-[#232336] text-white"
                                         />
                                         {newProblem.testcases.length > 1 && (
                                             <button
                                                 onClick={() => removeTestcaseField(index)}
-                                                className="text-red-500 hover:text-red-700 text-lg font-bold"
+                                                className="text-red-400 hover:text-red-600 text-lg font-bold"
                                             >
                                                 &times;
                                             </button>
                                         )}
                                     </div>
                                 ))}
-                                <button onClick={addTestcaseField} className="text-sm text-blue-500 hover:underline mt-2">+ Add Testcase</button>
+                                <button onClick={addTestcaseField} className="text-sm text-[#A020F0] hover:underline mt-2">+ Add Testcase</button>
                             </div>
 
-                            {addError && <p className="text-red-500">{addError}</p>}
+                            {addError && <p className="text-red-400">{addError}</p>}
 
                             <div className="flex justify-end gap-4 pt-4">
                                 <button
                                     onClick={() => setShowAddModal(false)}
-                                    className="px-4 py-2 bg-gray-300 text-gray-900 rounded hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
+                                    className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 border border-gray-600"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleAddProblem}
-                                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                    className="px-4 py-2 bg-[#A020F0] text-white rounded hover:bg-[#7c16b3] border border-[#A020F0]"
                                 >
                                     Submit
                                 </button>
@@ -488,25 +496,25 @@ function UserHome() {
                 </div>
             )}
             {showModifyModal && editProblem && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-xl max-w-2xl w-full relative">
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+                    <div className="bg-[#18122B] border border-[#A020F0] p-6 rounded-2xl shadow-2xl max-w-2xl w-full relative">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Modify Problem</h3>
-                            <button onClick={() => setShowModifyModal(false)} className="text-gray-500 hover:text-red-600 text-2xl">&times;</button>
+                            <h3 className="text-xl font-bold text-white">Modify Problem</h3>
+                            <button onClick={() => setShowModifyModal(false)} className="text-gray-400 hover:text-red-500 text-2xl">&times;</button>
                         </div>
 
                         <div className="space-y-4">
                             <input
                                 type="text"
                                 placeholder="Title"
-                                className="w-full p-3 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-full p-3 rounded border border-gray-700 bg-[#232336] text-white"
                                 value={editProblem.title}
                                 onChange={(e) => setEditProblem({ ...editProblem, title: e.target.value })}
                             />
 
                             <textarea
                                 placeholder="Description"
-                                className="w-full p-3 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-full p-3 rounded border border-gray-700 bg-[#232336] text-white"
                                 rows="3"
                                 value={editProblem.description}
                                 onChange={(e) => setEditProblem({ ...editProblem, description: e.target.value })}
@@ -515,7 +523,7 @@ function UserHome() {
                             <select
                                 value={editProblem.difficulty}
                                 onChange={(e) => setEditProblem({ ...editProblem, difficulty: e.target.value })}
-                                className="w-full p-3 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-full p-3 rounded border border-gray-700 bg-[#232336] text-white"
                             >
                                 <option value="Easy">Easy</option>
                                 <option value="Medium">Medium</option>
@@ -523,7 +531,7 @@ function UserHome() {
                             </select>
 
                             <div>
-                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Testcases</h4>
+                                <h4 className="text-lg font-semibold text-white mb-2">Testcases</h4>
                                 {editProblem.testcases.map((tc, index) => (
                                     <div key={index} className="flex gap-2 mb-2">
                                         <input
@@ -535,7 +543,7 @@ function UserHome() {
                                                 newTCs[index].input = e.target.value;
                                                 setEditProblem({ ...editProblem, testcases: newTCs });
                                             }}
-                                            className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white"
+                                            className="w-1/2 p-2 border border-gray-700 rounded bg-[#232336] text-white"
                                         />
                                         <input
                                             type="text"
@@ -546,7 +554,7 @@ function UserHome() {
                                                 newTCs[index].ExpectedOutput = e.target.value;
                                                 setEditProblem({ ...editProblem, testcases: newTCs });
                                             }}
-                                            className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white"
+                                            className="w-1/2 p-2 border border-gray-700 rounded bg-[#232336] text-white"
                                         />
                                         {editProblem.testcases.length > 1 && (
                                             <button
@@ -555,7 +563,7 @@ function UserHome() {
                                                     updated.splice(index, 1);
                                                     setEditProblem({ ...editProblem, testcases: updated });
                                                 }}
-                                                className="text-red-500 hover:text-red-700 text-lg font-bold"
+                                                className="text-red-400 hover:text-red-600 text-lg font-bold"
                                             >
                                                 &times;
                                             </button>
@@ -569,24 +577,24 @@ function UserHome() {
                                             testcases: [...prev.testcases, { input: "", ExpectedOutput: "" }],
                                         }))
                                     }
-                                    className="text-sm text-blue-500 hover:underline mt-2"
+                                    className="text-sm text-[#A020F0] hover:underline mt-2"
                                 >
                                     + Add Testcase
                                 </button>
                             </div>
 
-                            {editError && <p className="text-red-500">{editError}</p>}
+                            {editError && <p className="text-red-400">{editError}</p>}
 
                             <div className="flex justify-end gap-4 pt-4">
                                 <button
                                     onClick={() => setShowModifyModal(false)}
-                                    className="px-4 py-2 bg-gray-300 text-gray-900 rounded hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
+                                    className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 border border-gray-600"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleUpdateProblem}
-                                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                                    className="px-4 py-2 bg-[#A020F0] text-white rounded hover:bg-[#7c16b3] border border-[#A020F0]"
                                 >
                                     Save Changes
                                 </button>

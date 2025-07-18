@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import logo from "./utilities/logo.png";
 import codeicon from "./utilities/code-icon.png";
 import profile from "./utilities/profile.jpg";
-
+import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 const SERVER_URL = import.meta.env.VITE_BACKEND_SERVER_URL;
 const COMPILER_URL = import.meta.env.VITE_COMPILER_SERVER_URL;
@@ -55,6 +55,16 @@ function ProblemPage() {
 
   const { id } = useParams();
   const [problem, setProblem] = useState(null);
+
+
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+     
+        return;
+    }
+ 
+}, []);
 
   useEffect(() => {
     const fetchProblem = async () => {
@@ -450,6 +460,7 @@ function ProblemPage() {
               onClick={() => setProfileMenuOpen((open) => !open)}
             >
               <img className="w-9 h-9 rounded-full border-2 border-[#A020F0]" src={profile} alt="user profile" />
+              
             </button>
             {profileMenuOpen && (
               <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 border border-gray-200 dark:border-gray-700">
@@ -676,28 +687,28 @@ function ProblemPage() {
                           handleAIFeedback(); // Call AI generation
                         }}
                         disabled={isAIGenerating}
-                        className={`px-5 py-2 rounded border border-[#A020F0] font-semibold text-sm transition-colors
-    ${isAIGenerating ? 'bg-[#3a3a55] text-gray-400 cursor-not-allowed' : 'text-[#A020F0] bg-transparent hover:bg-[#292A40] hover:text-white'}`}
+                        className={`px-5 py-2 rounded border font-semibold text-sm transition-colors
+    ${isAIGenerating ? 'bg-[#14532d] text-gray-300 cursor-not-allowed border-[#22c55e]' : 'text-white bg-[#22c55e] border-[#22c55e] hover:bg-[#16a34a] hover:text-white'}`}
                       >
                         {isAIGenerating ? 'Generating...' : 'AI-feedback'}
                       </button>
-
 
                       {/* Run Button */}
                       <button
                         onClick={handleRunCode}
                         disabled={running}
-                        className="bg-[#0f172a] text-white border border-[#334155] px-4 py-2 rounded hover:bg-[#1e293b] transition"
+                        className={`px-4 py-2 rounded border font-semibold text-sm transition-colors
+    ${running ? 'bg-[#232336] text-gray-400 cursor-not-allowed border-white' : 'text-white bg-[#18181b] border-white hover:bg-[#292A40] hover:text-white'}`}
                       >
                         {running ? "Running..." : "Run Code"}
                       </button>
-
 
                       {/* Submit Button */}
                       <button
                         onClick={handleSubmitCode}
                         disabled={submitting}
-                        className="bg-[#1d1d2f] text-white border border-[#334155] px-4 py-2 rounded hover:bg-[#2c2c3d] transition"
+                        className={`px-4 py-2 rounded border font-semibold text-sm transition-colors
+    ${submitting ? 'bg-[#7c1bb3] text-gray-300 cursor-not-allowed border-[#A020F0]' : 'text-white bg-[#A020F0] border-[#A020F0] hover:bg-[#b84cf6] hover:text-white'}`}
                       >
                         {submitting ? "Submitting..." : "Submit Code"}
                       </button>
