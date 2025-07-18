@@ -2,10 +2,7 @@ import { Fragment, useState, useEffect, useRef } from "react";
 import { FiMaximize2, FiMinimize2, FiCopy, FiRotateCcw, FiFileText, FiRefreshCw } from "react-icons/fi";
 import "./index.css";
 import { useParams } from "react-router-dom";
-import ReactMarkdown from 'react-markdown';
-
-import { useLocation } from "react-router-dom";
-import moment from "moment"; // for formatting timestamp
+import moment from "moment"; 
 
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
@@ -45,7 +42,7 @@ function getLanguageExtension(lang) {
   switch (lang) {
     case "python": return python();
     case "javascript": return javascript();
-    case "c": return cpp(); // Use C++ mode for C
+    case "c": return cpp(); 
     case "java": return java();
     case "go": return go();
     default: return cpp();
@@ -55,8 +52,10 @@ function getLanguageExtension(lang) {
 
 
 function ProblemPage() {
-  const [problem, setProblem] = useState(null);
+
   const { id } = useParams();
+  const [problem, setProblem] = useState(null);
+
   useEffect(() => {
     const fetchProblem = async () => {
       try {
@@ -73,57 +72,6 @@ function ProblemPage() {
     fetchProblem();
   }, [id]);
 
-
-
-
-
-
-  const [code, setCode] = useState(`#include <iostream>\nusing namespace std;\n\nint main() {\n    // your code goes here\n    return 0;\n}`);
-  const [selectedLanguage, setSelectedLanguage] = useState("cpp");
-
-
-  const [copied, setCopied] = useState(false);
-
-  const profileRef = useRef();
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-
-  const [codeEditorHeight, setCodeEditorHeight] = useState(null); // will be set on mount
-  const dragRef = useRef(null);
-  const containerRef = useRef(null);
-  const isDraggingRef = useRef(false);
-
-  // Only one panel can be maximized at a time: 'question', 'code', or null
-  const [maximizedPanel, setMaximizedPanel] = useState(null); // null | 'question' | 'code'
-  const [running, setRunning] = useState(false);
-
-  // Bottom bar action states
-  const [activeAction, setActiveAction] = useState(null); // 'custom' | 'run' | 'submit' | 'ai-feedback' | null
-  const [customInput, setCustomInput] = useState('');
-  const [customOutput, setCustomOutput] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [customInputChecked, setCustomInputChecked] = useState(false);
-
-  // Action handlers
-  const handleCustomToggle = (checked) => {
-    setCustomInputChecked(checked);
-    if (checked) {
-      setActiveAction('custom');
-      setIsExpanded(true);
-    } else {
-      setActiveAction(null);
-      setIsExpanded(false);
-    }
-  };
-
-
-  const handleActionClick = (action) => {
-    // Auto-deselect custom if it's checked
-    if (customInputChecked) {
-      setCustomInputChecked(false);
-    }
-    setActiveAction(action);
-    setIsExpanded(true);
-  };
 
   const [isTesting, setIsTesting] = useState(false);
   const handleCustomTest = async () => {
@@ -150,14 +98,12 @@ function ProblemPage() {
     } catch (error) {
       console.error("Custom test error:", error);
       const message = error.response?.data?.message || error.message || "Unknown error";
-      setCustomOutput(`❌ Error: ${message}`);
+      setCustomOutput(` Error: ${message}`);
     } finally {
       setIsTesting(false);
     }
-
-
-
   };
+
 
   const [isAIGenerating, setIsAIGenerating] = useState(false);
   const [aiFeedback, setAiFeedback] = useState({ score: null, feedback: "" });
@@ -197,24 +143,22 @@ function ProblemPage() {
     } catch (error) {
       console.error("AI Feedback error:", error);
       const message = error.response?.data?.message || error.message || "Unknown error";
-      setAiFeedback({ score: null, feedback: `❌ Error: ${message}` });
+      setAiFeedback({ score: null, feedback: ` Error: ${message}` });
     } finally {
       setIsAIGenerating(false);
     }
   };
 
 
-
   const [runResults, setRunResults] = useState(null);
   const [compileError, setCompileError] = useState('');
-
 
   const handleRunCode = async () => {
     setActiveAction('run');
     setIsExpanded(true);
     setCompileError('');
     setRunResults(null);
-    setRunning(true); // <-- Start loading
+    setRunning(true); 
 
     try {
       const token = localStorage.getItem("authToken");
@@ -237,7 +181,7 @@ function ProblemPage() {
     } catch (err) {
       setCompileError(err.response?.data?.message || err.message);
     } finally {
-      setRunning(false); // <-- End loading
+      setRunning(false); 
     }
   };
 
@@ -279,9 +223,10 @@ function ProblemPage() {
   };
 
 
+
   const [activeTab, setActiveTab] = useState("description");
   const [submissions, setSubmissions] = useState([]);
-  const [viewingCode, setViewingCode] = useState(null); // for code popup
+  const [viewingCode, setViewingCode] = useState(null); 
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -299,25 +244,8 @@ function ProblemPage() {
   }, [id]);
 
 
-
-
-
-
-
-
-
-  // Set initial code editor height to 80% of container height
-  useEffect(() => {
-    if (containerRef.current && codeEditorHeight === null) {
-      const containerHeight = containerRef.current.offsetHeight;
-      // Set code editor height so bottom bar is at least 80px tall by default
-      setCodeEditorHeight(containerHeight - 80);
-    }
-  }, [codeEditorHeight]);
-
-  useEffect(() => {
-    setCode(getTemplateCode(selectedLanguage));
-  }, [selectedLanguage]);
+  const profileRef = useRef();
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -328,6 +256,77 @@ function ProblemPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+
+
+
+  const [code, setCode] = useState(`#include <iostream>\nusing namespace std;\n\nint main() {\n    // your code goes here\n    return 0;\n}`);
+  const [selectedLanguage, setSelectedLanguage] = useState("cpp");
+
+  useEffect(() => {
+    setCode(getTemplateCode(selectedLanguage));
+  }, [selectedLanguage]);
+
+  const handleResetCode = () => {
+    setCode(getTemplateCode(selectedLanguage));
+  };
+
+
+  const [copied, setCopied] = useState(false);
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+
+  const [codeEditorHeight, setCodeEditorHeight] = useState(null); 
+  const dragRef = useRef(null);
+  const containerRef = useRef(null);
+  const isDraggingRef = useRef(false);
+
+  
+  const [maximizedPanel, setMaximizedPanel] = useState(null);
+  const [running, setRunning] = useState(false);
+
+  
+  const [activeAction, setActiveAction] = useState(null); // 'custom' | 'run' | 'submit' | 'ai-feedback' | null
+  const [customInput, setCustomInput] = useState('');
+  const [customOutput, setCustomOutput] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [customInputChecked, setCustomInputChecked] = useState(false);
+
+  // Action handlers
+  const handleCustomToggle = (checked) => {
+    setCustomInputChecked(checked);
+    if (checked) {
+      setActiveAction('custom');
+      setIsExpanded(true);
+    } else {
+      setActiveAction(null);
+      setIsExpanded(false);
+    }
+  };
+
+
+  const handleActionClick = (action) => {
+    // Auto-deselect custom if it's checked
+    if (customInputChecked) {
+      setCustomInputChecked(false);
+    }
+    setActiveAction(action);
+    setIsExpanded(true);
+  };
+
+  // Set initial code editor height to 80% of container height
+  useEffect(() => {
+    if (containerRef.current && codeEditorHeight === null) {
+      const containerHeight = containerRef.current.offsetHeight;
+      // Set code editor height so bottom bar is at least 80px tall by default
+      setCodeEditorHeight(containerHeight - 80);
+    }
+  }, [codeEditorHeight]);
+
 
   // Drag logic for resizer
   useEffect(() => {
@@ -356,15 +355,8 @@ function ProblemPage() {
     document.body.style.cursor = 'row-resize';
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
 
-  const handleResetCode = () => {
-    setCode(getTemplateCode(selectedLanguage));
-  };
+
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -760,10 +752,10 @@ function ProblemPage() {
                       {activeAction === 'run' && (
                         <div className="space-y-4">
                           {running ? (
-                            <div className="text-yellow-400 text-sm italic animate-pulse">⚙️ Running...</div>
+                            <div className="text-yellow-400 text-sm italic animate-pulse"> Running...</div>
                           ) : compileError ? (
                             <div className="bg-red-900/20 border border-red-500/30 rounded p-3">
-                              <span className="text-red-400 font-semibold">❌ Compilation Failed:</span>
+                              <span className="text-red-400 font-semibold"> Compilation Failed:</span>
                               <pre className="text-white mt-2 whitespace-pre-wrap break-words">{compileError}</pre>
                             </div>
                           ) : runResults ? (
@@ -809,10 +801,10 @@ function ProblemPage() {
                       {activeAction === 'submit' && (
                         <div className="space-y-4">
                           {submitting ? (
-                            <div className="text-yellow-400 text-sm italic animate-pulse">🚀 Submitting...</div>
+                            <div className="text-yellow-400 text-sm italic animate-pulse"> Submitting...</div>
                           ) : submitError ? (
                             <div className="bg-red-900/20 border border-red-500/30 rounded p-3">
-                              <span className="text-red-400 font-semibold">❌ Compilation Failed:</span>
+                              <span className="text-red-400 font-semibold"> Compilation Failed:</span>
                               <pre className="text-white mt-2 whitespace-pre-wrap break-words">{submitError}</pre>
                             </div>
                           ) : submitResults ? (
@@ -826,8 +818,8 @@ function ProblemPage() {
                                   : "text-yellow-300"
                                   }`}>
                                   {submitResults.PassedTestcases === submitResults.TotalTestcases
-                                    ? "✅ All Testcases Passed"
-                                    : `⚠️ Passed ${submitResults.PassedTestcases} / ${submitResults.TotalTestcases} Testcases`}
+                                    ? " All Testcases Passed"
+                                    : ` Passed ${submitResults.PassedTestcases} / ${submitResults.TotalTestcases} Testcases`}
                                 </span>
                               </div>
 
@@ -881,7 +873,7 @@ function ProblemPage() {
                               </>
                             ) : (
                               <div className="text-gray-300 whitespace-pre-line text-sm">
-                                {aiFeedback.feedback || "⚠️ No valid feedback received."}
+                                {aiFeedback.feedback || " No valid feedback received."}
                               </div>
                             )}
                           </div>

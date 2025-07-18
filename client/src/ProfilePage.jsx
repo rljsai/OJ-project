@@ -92,7 +92,9 @@ function ProfilePage() {
           </div>
 
 
-          <Link to="/user-home" className="bg-[#232336] hover:bg-[#A020F0] text-white font-semibold px-5 py-2 rounded-lg transition shadow text-sm"> Back to Home</Link>
+          <Link to="/user-home" className="bg-[#232336] hover:bg-[#A020F0] text-white font-semibold px-5 py-2 rounded-lg transition shadow text-sm">
+
+             Back to Home</Link>
 
         </div>
       </nav>
