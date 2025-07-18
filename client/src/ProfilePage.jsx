@@ -120,7 +120,7 @@ function ProfilePage() {
           </p>
 
           <span className="inline-block mt-2 px-4 py-1 text-sm sm:text-base font-medium rounded-full bg-[#A020F0] text-white shadow-sm">
-            role: <span className="font-semibold">user</span>
+            role: <span className="font-semibold">{role}</span>
           </span>
 
           <button
