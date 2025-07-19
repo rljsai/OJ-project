@@ -88,7 +88,7 @@ function ProfilePage() {
 
           <div className="flex items-center">
             <img className="w-12 h-12 mr-4" src={logo} alt="logo" />
-            <span className="text-3xl font-bold text-gray-900 dark:text-white">CodeShiruken</span>
+            <span className="text-3xl font-bold text-gray-900 dark:text-white">CodeShuriken</span>
           </div>
 
 

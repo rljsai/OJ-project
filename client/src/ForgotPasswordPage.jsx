@@ -51,7 +51,7 @@ function ForgotPasswordPage() {
                                     src={logo}
                                     alt="logo"
                                 />
-                                CodeShiruken
+                                CodeShuriken
                             </a>
                         </div>
 
