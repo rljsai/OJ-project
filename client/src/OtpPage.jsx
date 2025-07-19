@@ -78,7 +78,7 @@ function OtpPage() {
                                     src={logo}
                                     alt="logo" />
 
-                                codeshuriken
+                                CodeShiruken
 
                             </a>
                         </div>

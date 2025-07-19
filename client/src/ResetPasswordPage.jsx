@@ -58,7 +58,7 @@ function ResetPasswordPage() {
                                     alt="logo"
                                 />
 
-                                codeshuriken
+                                CodeShiruken
 
                             </a>
                         </div>

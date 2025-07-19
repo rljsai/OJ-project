@@ -444,7 +444,7 @@ function ProblemPage() {
       <div className="w-full flex justify-between items-center px-6 py-2 bg-[#1a0f23]">
         <a href="#" className="flex text-2xl font-bold text-gray-900 dark:text-white">
           <img className="w-10 h-10 mr-1" src={logo} alt="logo" />
-          codeshuriken
+          CodeShiruken
         </a>
         <div className="flex items-center space-x-3">
           <Link to="/user-home" className="bg-[#242436] hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center">

@@ -46,7 +46,7 @@ function LoginPage() {
                         <div className="flex justify-center">
                             <a href="#" className="flex items-center mb-6 text-3xl font-extrabold text-gray-900 dark:text-white">
                                 <img className="w-10 h-10 mr-3" src={logo} alt="logo" />
-                                codeshuriken
+                                CodeShiruken
                             </a>
                         </div>
 
