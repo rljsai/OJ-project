@@ -76,7 +76,7 @@ function RegisterPage() {
                                     alt="logo"
                                 />
 
-                                CodeShiruken
+                                codeshuriken
 
                             </a>
                         </div>
